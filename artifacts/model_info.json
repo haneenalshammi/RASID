@@ -1,0 +1,24 @@
+{
+    "model_name": "XGBoost",
+    "target": "Risk_Level",
+    "features": [
+        "Port_Congestion",
+        "geopolitical_risk",
+        "weather_severity",
+        "Supplier_Reliability",
+        "Supplier_Capacity_Utilization",
+        "Inventory_Level",
+        "Demand_Volatility",
+        "Lead_Time_Days",
+        "Shipping_Cost_Index"
+    ],
+    "validation_accuracy": 0.7805,
+    "validation_macro_f1": 0.7847762076594549,
+    "class_labels": {
+        "0": "Low",
+        "1": "Medium",
+        "2": "High"
+    },
+    "test_accuracy": 0.7833,
+    "test_macro_f1": 0.7879
+}
