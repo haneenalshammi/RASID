@@ -6,6 +6,7 @@ from pathlib import Path
 
 import altair as alt
 import joblib
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -34,10 +35,22 @@ COLORS = {
     "text": "#243447",
     "muted": "#6B7280",
 }
-RISK_TINTS = {"Low": "#E6F6EE", "Medium": "#FEF3DC", "High": "#FDE9EA"}
+
+RISK_TINTS = {
+    "Low": "#E6F6EE",
+    "Medium": "#FEF3DC",
+    "High": "#FDE9EA",
+}
+
 WARNING_MESSAGES = {
-    "Low": ("✓ Low Risk", "The model classified the current conditions as Low Risk."),
-    "Medium": ("⚠ Monitor Closely", "The model classified the current conditions as Medium Risk."),
+    "Low": (
+        "✓ Low Risk",
+        "The model classified the current conditions as Low Risk.",
+    ),
+    "Medium": (
+        "⚠ Monitor Closely",
+        "The model classified the current conditions as Medium Risk.",
+    ),
     "High": (
         "⚠ Early Warning",
         "The model classified the current supply chain conditions as High Risk.",
@@ -45,19 +58,31 @@ WARNING_MESSAGES = {
 }
 
 WATCHLIST_COLUMNS = [
-    TIMESTAMP_COLUMN, SUPPLIER_COLUMN, TARGET_COLUMN,
-    "Lead_Time_Days", "Inventory_Level", "Port_Congestion",
+    TIMESTAMP_COLUMN,
+    SUPPLIER_COLUMN,
+    TARGET_COLUMN,
+    "Lead_Time_Days",
+    "Inventory_Level",
+    "Port_Congestion",
 ]
+
 MONITORING_COLUMNS = [
-    TIMESTAMP_COLUMN, SUPPLIER_COLUMN, "Port_Congestion", "geopolitical_risk",
-    "weather_severity", "Supplier_Reliability", "Inventory_Level",
-    "Lead_Time_Days", TARGET_COLUMN,
+    TIMESTAMP_COLUMN,
+    SUPPLIER_COLUMN,
+    "Port_Congestion",
+    "geopolitical_risk",
+    "weather_severity",
+    "Supplier_Reliability",
+    "Inventory_Level",
+    "Lead_Time_Days",
+    TARGET_COLUMN,
 ]
 
 # ============================================================
 # 3. PROJECT PATHS
 # ============================================================
 BASE_PATH = Path(__file__).resolve().parent
+
 DATA_PATH = BASE_PATH / "supply_20000.csv"
 LOGO_PATH = BASE_PATH / "logo.jpeg"
 MODEL_PATH = BASE_PATH / "artifacts" / "model.joblib"
@@ -174,29 +199,43 @@ st.markdown(
 # 6. HELPER FUNCTIONS
 # ============================================================
 def pretty_name(column_name: str) -> str:
-    """Turn a column name such as 'Port_Congestion' into 'Port Congestion'."""
     return column_name.replace("_", " ").title()
 
 
 def render_header(title: str, description: str) -> None:
-    """Render the page title, description and a small logo."""
     text_column, logo_column = st.columns([5, 1])
+
     with text_column:
         st.markdown(
-            f'<div class="page-title">{title}</div><div class="page-description">{description}</div>',
+            f'<div class="page-title">{title}</div>'
+            f'<div class="page-description">{description}</div>',
             unsafe_allow_html=True,
         )
+
     with logo_column:
         st.image(str(LOGO_PATH), width=150)
 
 
 def render_section_title(title: str, note: str = "") -> None:
-    st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="section-title">{title}</div>',
+        unsafe_allow_html=True,
+    )
+
     if note:
-        st.markdown(f'<div class="section-note">{note}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="section-note">{note}</div>',
+            unsafe_allow_html=True,
+        )
 
 
-def render_kpi_card(label: str, value: str, note: str = "", value_color: str = COLORS["navy"]) -> None:
+def render_kpi_card(
+    label: str,
+    value: str,
+    note: str = "",
+    value_color: str = COLORS["navy"],
+) -> None:
+
     st.markdown(
         f"""
         <div class="kpi-card">
@@ -210,47 +249,96 @@ def render_kpi_card(label: str, value: str, note: str = "", value_color: str = C
 
 
 def chart_title(title: str, subtitle: str) -> alt.TitleParams:
-    return alt.TitleParams(text=title, subtitle=subtitle, anchor="start", offset=14)
+    return alt.TitleParams(
+        text=title,
+        subtitle=subtitle,
+        anchor="start",
+        offset=14,
+    )
 
 
 def style_chart(chart: alt.Chart) -> alt.Chart:
     return (
-        chart.properties(padding={"top": 16, "left": 12, "right": 12, "bottom": 12})
+        chart
+        .properties(
+            padding={
+                "top": 16,
+                "left": 12,
+                "right": 12,
+                "bottom": 12,
+            }
+        )
         .configure(background=COLORS["white"])
         .configure_view(strokeWidth=0)
         .configure_axis(
-            labelColor=COLORS["text"], titleColor=COLORS["muted"],
-            gridColor="#EEF2F6", domainColor="#C9D2DE", tickColor="#C9D2DE",
+            labelColor=COLORS["text"],
+            titleColor=COLORS["muted"],
+            gridColor="#EEF2F6",
+            domainColor="#C9D2DE",
+            tickColor="#C9D2DE",
         )
-        .configure_legend(labelColor=COLORS["text"], titleColor=COLORS["muted"])
+        .configure_legend(
+            labelColor=COLORS["text"],
+            titleColor=COLORS["muted"],
+        )
         .configure_title(
-            color=COLORS["navy"], subtitleColor=COLORS["muted"],
-            fontSize=17, subtitleFontSize=13, font="Inter, Segoe UI, sans-serif",
+            color=COLORS["navy"],
+            subtitleColor=COLORS["muted"],
+            fontSize=17,
+            subtitleFontSize=13,
+            font="Inter, Segoe UI, sans-serif",
             subtitleFont="Inter, Segoe UI, sans-serif",
         )
     )
 
 
 def risk_color_scale() -> alt.Scale:
-    return alt.Scale(domain=RISK_ORDER, range=[COLORS[level] for level in RISK_ORDER])
+    return alt.Scale(
+        domain=RISK_ORDER,
+        range=[COLORS[level] for level in RISK_ORDER],
+    )
 
 
 def card(name: str):
-    """A bordered white container; the key lets the CSS style it as a card."""
-    return st.container(border=True, key=f"card_{name}")
+    return st.container(
+        border=True,
+        key=f"card_{name}",
+    )
 
 
-def show_table(table: pd.DataFrame, height: int = 350) -> None:
+def show_table(
+    table: pd.DataFrame,
+    height: int = 350,
+) -> None:
+
     table = table.copy()
+
     if TIMESTAMP_COLUMN in table.columns:
-        table[TIMESTAMP_COLUMN] = table[TIMESTAMP_COLUMN].dt.strftime("%Y-%m-%d")
-    st.dataframe(table, hide_index=True, width="stretch", height=height)
+        table[TIMESTAMP_COLUMN] = table[
+            TIMESTAMP_COLUMN
+        ].dt.strftime("%Y-%m-%d")
+
+    st.dataframe(
+        table,
+        hide_index=True,
+        width="stretch",
+        height=height,
+    )
 
 
-def stop_with_error(message: str, expected_path: Path) -> None:
+def stop_with_error(
+    message: str,
+    expected_path: Path,
+) -> None:
+
     st.error(message)
-    st.markdown(f"Expected file: `{expected_path.name}`")
+
+    st.markdown(
+        f"Expected file: `{expected_path.name}`"
+    )
+
     st.code(str(expected_path))
+
     st.stop()
 
 
@@ -259,8 +347,13 @@ def stop_with_error(message: str, expected_path: Path) -> None:
 # ============================================================
 @st.cache_data
 def load_dataset(path: Path) -> pd.DataFrame:
+
     dataset = pd.read_csv(path)
-    dataset[TIMESTAMP_COLUMN] = pd.to_datetime(dataset[TIMESTAMP_COLUMN])
+
+    dataset[TIMESTAMP_COLUMN] = pd.to_datetime(
+        dataset[TIMESTAMP_COLUMN]
+    )
+
     return dataset
 
 
@@ -276,7 +369,12 @@ def load_model(path: Path):
 # 9. MODEL INFORMATION LOADING
 # ============================================================
 def load_model_info(path: Path) -> dict:
-    with open(path, encoding="utf-8") as info_file:
+
+    with open(
+        path,
+        encoding="utf-8",
+    ) as info_file:
+
         return json.load(info_file)
 
 
@@ -284,46 +382,100 @@ def load_model_info(path: Path) -> dict:
 # 10. FILE VALIDATION
 # ============================================================
 if not DATA_PATH.exists():
-    stop_with_error("RASID could not find the dataset.", DATA_PATH)
+    stop_with_error(
+        "RASID could not find the dataset.",
+        DATA_PATH,
+    )
+
 if not MODEL_PATH.exists():
-    stop_with_error("RASID could not find the trained model.", MODEL_PATH)
+    stop_with_error(
+        "RASID could not find the trained model.",
+        MODEL_PATH,
+    )
+
 if not MODEL_INFO_PATH.exists():
-    stop_with_error("RASID could not find the model information file.", MODEL_INFO_PATH)
+    stop_with_error(
+        "RASID could not find the model information file.",
+        MODEL_INFO_PATH,
+    )
+
 if not LOGO_PATH.exists():
-    stop_with_error("RASID could not find the logo.", LOGO_PATH)
+    stop_with_error(
+        "RASID could not find the logo.",
+        LOGO_PATH,
+    )
+
 
 df = load_dataset(DATA_PATH)
+
 trained_model = load_model(MODEL_PATH)
+
 try:
-    model_info = load_model_info(MODEL_INFO_PATH)
+    model_info = load_model_info(
+        MODEL_INFO_PATH
+    )
+
 except json.JSONDecodeError as error:
-    st.error(f"RASID could not read the model information file: {error}")
+
+    st.error(
+        f"RASID could not read the model information file: {error}"
+    )
+
     st.stop()
 
+
 # ============================================================
-# 11. FEATURE DETECTION
+# 11. MODEL CONFIGURATION
 # ============================================================
-model_features = model_info.get("features") or list(trained_model.feature_names_in_)
-missing_features = [feature for feature in model_features if feature not in df.columns]
+model_features = model_info.get(
+    "features"
+)
+
+window_size = int(
+    model_info.get(
+        "window_size",
+        7,
+    )
+)
+
+target_column = model_info.get(
+    "target",
+    TARGET_COLUMN,
+)
+
+label_map = model_info.get(
+    "label_map"
+)
+
+if label_map is None:
+
+    st.error(
+        "model_info.json does not contain 'label_map'."
+    )
+
+    st.stop()
+
+
+class_labels = {
+    int(code): label
+    for label, code in label_map.items()
+}
+
+
+missing_features = [
+    feature
+    for feature in model_features
+    if feature not in df.columns
+]
+
 row_count, column_count = df.shape
 
 
-saved_class_labels = model_info.get("class_labels")
-if not saved_class_labels:
-    st.error("model_info.json does not contain 'class_labels' (the mapping saved at training time).")
-    st.stop()
-class_labels = {int(code): label for code, label in saved_class_labels.items()}
-if set(class_labels.values()) != set(RISK_ORDER) or set(class_labels) != {int(c) for c in trained_model.classes_}:
-    st.error("The class_labels in model_info.json do not match the trained model's classes.")
-    st.stop()
-
-# ============================================================
-# 12. SIDEBAR
-# ============================================================
 # ============================================================
 # 12. SIDEBAR
 # ============================================================
 with st.sidebar:
+
     st.image(
         str(LOGO_PATH),
         width="stretch",
@@ -345,21 +497,50 @@ with st.sidebar:
         label_visibility="collapsed",
     )
 
+
 # ============================================================
-# 13-18. PAGES
+# 13. OVERVIEW
 # ============================================================
-risk_counts = df[TARGET_COLUMN].value_counts().reindex(RISK_ORDER, fill_value=0)
+risk_counts = (
+    df[TARGET_COLUMN]
+    .value_counts()
+    .reindex(
+        RISK_ORDER,
+        fill_value=0,
+    )
+)
 
 
 def render_overview() -> None:
-    render_header(PROJECT_NAME, PROJECT_TITLE)
+
+    render_header(
+        PROJECT_NAME,
+        PROJECT_TITLE,
+    )
 
     kpi_columns = st.columns(4)
+
     with kpi_columns[0]:
-        render_kpi_card("Dataset Records", f"{row_count:,}", f"{column_count} columns")
-    for column, level in zip(kpi_columns[1:], RISK_ORDER):
+
+        render_kpi_card(
+            "Dataset Records",
+            f"{row_count:,}",
+            f"{column_count} columns",
+        )
+
+    for column, level in zip(
+        kpi_columns[1:],
+        RISK_ORDER,
+    ):
+
         with column:
-            share = risk_counts[level] / row_count * 100
+
+            share = (
+                risk_counts[level]
+                / row_count
+                * 100
+            )
+
             render_kpi_card(
                 f"{level} Risk",
                 f"{risk_counts[level]:,}",
@@ -368,39 +549,76 @@ def render_overview() -> None:
             )
 
     distribution = pd.DataFrame(
-        {"Risk Level": risk_counts.index, "Records": risk_counts.values}
-    )
-    distribution["Share"] = distribution["Records"] / row_count
-
-    bars = alt.Chart(distribution).mark_bar(
-        cornerRadiusEnd=6, size=26
-    ).encode(
-        y=alt.Y("Risk Level:N", sort=RISK_ORDER, title=None),
-        x=alt.X("Records:Q", title="Records"),
-        color=alt.Color(
-            "Risk Level:N",
-            scale=risk_color_scale(),
-            legend=None,
-        ),
-        tooltip=[
-            "Risk Level",
-            alt.Tooltip("Records:Q", format=","),
-            alt.Tooltip("Share:Q", format=".1%"),
-        ],
+        {
+            "Risk Level": risk_counts.index,
+            "Records": risk_counts.values,
+        }
     )
 
-    labels = bars.mark_text(
-        align="left", dx=6, color=COLORS["text"]
-    ).encode(
-        text=alt.Text("Records:Q", format=","),
-        color=alt.value(COLORS["text"]),
+    distribution["Share"] = (
+        distribution["Records"]
+        / row_count
+    )
+
+    bars = (
+        alt.Chart(distribution)
+        .mark_bar(
+            cornerRadiusEnd=6,
+            size=26,
+        )
+        .encode(
+            y=alt.Y(
+                "Risk Level:N",
+                sort=RISK_ORDER,
+                title=None,
+            ),
+            x=alt.X(
+                "Records:Q",
+                title="Records",
+            ),
+            color=alt.Color(
+                "Risk Level:N",
+                scale=risk_color_scale(),
+                legend=None,
+            ),
+            tooltip=[
+                "Risk Level",
+                alt.Tooltip(
+                    "Records:Q",
+                    format=",",
+                ),
+                alt.Tooltip(
+                    "Share:Q",
+                    format=".1%",
+                ),
+            ],
+        )
+    )
+
+    labels = (
+        bars
+        .mark_text(
+            align="left",
+            dx=6,
+        )
+        .encode(
+            text=alt.Text(
+                "Records:Q",
+                format=",",
+            ),
+            color=alt.value(
+                COLORS["text"]
+            ),
+        )
     )
 
     with card("distribution"):
+
         title = chart_title(
             "Risk Distribution",
             "Number of records in each risk level",
         )
+
         st.altair_chart(
             style_chart(
                 (bars + labels).properties(
@@ -413,18 +631,34 @@ def render_overview() -> None:
         )
 
 
+# ============================================================
+# 14. RISK MONITORING
+# ============================================================
 def apply_monitoring_filters() -> pd.DataFrame:
-    """Render the Risk Monitoring filters and return the matching records."""
-    supplier_ids = sorted(df[SUPPLIER_COLUMN].unique())
-    first_date = df[TIMESTAMP_COLUMN].min().date()
-    last_date = df[TIMESTAMP_COLUMN].max().date()
+
+    supplier_ids = sorted(
+        df[SUPPLIER_COLUMN].unique()
+    )
+
+    first_date = (
+        df[TIMESTAMP_COLUMN]
+        .min()
+        .date()
+    )
+
+    last_date = (
+        df[TIMESTAMP_COLUMN]
+        .max()
+        .date()
+    )
 
     supplier_column, risk_column, date_column = st.columns(3)
 
     supplier = supplier_column.selectbox(
         "Supplier",
         ["All"] + supplier_ids,
-        format_func=lambda value: value
+        format_func=lambda value:
+        value
         if value == "All"
         else f"Supplier {value}",
     )
@@ -436,7 +670,10 @@ def apply_monitoring_filters() -> pd.DataFrame:
 
     date_range = date_column.date_input(
         "Date Range",
-        value=(first_date, last_date),
+        value=(
+            first_date,
+            last_date,
+        ),
         min_value=first_date,
         max_value=last_date,
     )
@@ -444,15 +681,27 @@ def apply_monitoring_filters() -> pd.DataFrame:
     filtered = df
 
     if supplier != "All":
-        filtered = filtered[filtered[SUPPLIER_COLUMN] == supplier]
+
+        filtered = filtered[
+            filtered[SUPPLIER_COLUMN]
+            == supplier
+        ]
 
     if risk_level != "All":
-        filtered = filtered[filtered[TARGET_COLUMN] == risk_level]
+
+        filtered = filtered[
+            filtered[TARGET_COLUMN]
+            == risk_level
+        ]
 
     if len(date_range) == 2:
+
         start_date, end_date = date_range
+
         filtered = filtered[
-            filtered[TIMESTAMP_COLUMN].dt.date.between(
+            filtered[TIMESTAMP_COLUMN]
+            .dt.date
+            .between(
                 start_date,
                 end_date,
             )
@@ -462,6 +711,7 @@ def apply_monitoring_filters() -> pd.DataFrame:
 
 
 def render_risk_monitoring() -> None:
+
     render_header(
         "Risk Monitoring",
         "Explore supply chain risk records and identify patterns across suppliers and risk levels.",
@@ -475,13 +725,20 @@ def render_risk_monitoring() -> None:
     )
 
     if filtered_df.empty:
-        st.info("No records match the selected filters.")
+
+        st.info(
+            "No records match the selected filters."
+        )
+
         return
 
-    show_table(filtered_df[MONITORING_COLUMNS])
+    show_table(
+        filtered_df[MONITORING_COLUMNS]
+    )
 
     weekly_counts = (
-        filtered_df.set_index(TIMESTAMP_COLUMN)
+        filtered_df
+        .set_index(TIMESTAMP_COLUMN)
         .groupby(
             [
                 pd.Grouper(freq="W"),
@@ -489,37 +746,45 @@ def render_risk_monitoring() -> None:
             ]
         )
         .size()
-        .reset_index(name="Records")
+        .reset_index(
+            name="Records"
+        )
     )
 
-    trend = alt.Chart(weekly_counts).mark_line(
-        strokeWidth=2.5
-    ).encode(
-        x=alt.X(
-            f"{TIMESTAMP_COLUMN}:T",
-            title="Week",
-        ),
-        y=alt.Y(
-            "Records:Q",
-            title="Records per week",
-        ),
-        color=alt.Color(
-            f"{TARGET_COLUMN}:N",
-            scale=risk_color_scale(),
-            title="Risk Level",
-        ),
-        tooltip=[
-            f"{TIMESTAMP_COLUMN}:T",
-            f"{TARGET_COLUMN}:N",
-            "Records:Q",
-        ],
+    trend = (
+        alt.Chart(weekly_counts)
+        .mark_line(
+            strokeWidth=2.5
+        )
+        .encode(
+            x=alt.X(
+                f"{TIMESTAMP_COLUMN}:T",
+                title="Week",
+            ),
+            y=alt.Y(
+                "Records:Q",
+                title="Records per week",
+            ),
+            color=alt.Color(
+                f"{TARGET_COLUMN}:N",
+                scale=risk_color_scale(),
+                title="Risk Level",
+            ),
+            tooltip=[
+                f"{TIMESTAMP_COLUMN}:T",
+                f"{TARGET_COLUMN}:N",
+                "Records:Q",
+            ],
+        )
     )
 
     with card("trend"):
+
         title = chart_title(
             "Risk Trend",
             "Number of records per week, by risk level",
         )
+
         st.altair_chart(
             style_chart(
                 trend.properties(
@@ -537,7 +802,8 @@ def render_risk_monitoring() -> None:
     )
 
     supplier_summary = (
-        filtered_df.pivot_table(
+        filtered_df
+        .pivot_table(
             index=SUPPLIER_COLUMN,
             columns=TARGET_COLUMN,
             values=TIMESTAMP_COLUMN,
@@ -557,7 +823,8 @@ def render_risk_monitoring() -> None:
     )
 
     supplier_summary = (
-        supplier_summary.rename(
+        supplier_summary
+        .rename(
             columns={
                 level: f"{level} Risk"
                 for level in RISK_ORDER
@@ -579,10 +846,12 @@ def render_risk_monitoring() -> None:
     )
 
     high_risk_records = filtered_df[
-        filtered_df[TARGET_COLUMN] == "High"
+        filtered_df[TARGET_COLUMN]
+        == "High"
     ]
 
     if not high_risk_records.empty:
+
         render_section_title(
             "High Risk Watchlist",
             f"{len(high_risk_records):,} High-risk records, most recent first.",
@@ -591,216 +860,429 @@ def render_risk_monitoring() -> None:
         show_table(
             high_risk_records[
                 WATCHLIST_COLUMNS
-            ].sort_values(
+            ]
+            .sort_values(
                 TIMESTAMP_COLUMN,
                 ascending=False,
             )
         )
 
 
-def build_input_widgets() -> dict:
-    """Render one input per model feature (range and default taken from the dataset)."""
-    input_values = {}
-    grid_columns = st.columns(3)
+# ============================================================
+# 15. EARLY WARNING
+# ============================================================
 
-    for position, feature in enumerate(model_features):
-        minimum = df[feature].min()
-        maximum = df[feature].max()
-        median = df[feature].median()
+def get_seven_day_window(
+    supplier_id,
+    day_7_date,
+):
 
-        is_integer = pd.api.types.is_integer_dtype(
-            df[feature]
+    supplier_data = (
+        df[
+            df[SUPPLIER_COLUMN]
+            == supplier_id
+        ]
+        .sort_values(
+            TIMESTAMP_COLUMN
         )
+        .reset_index(
+            drop=True
+        )
+    )
 
-        with grid_columns[position % 3]:
-            if is_integer:
-                input_values[feature] = st.slider(
-                    pretty_name(feature),
-                    int(minimum),
-                    int(maximum),
-                    int(median),
-                    step=1,
-                )
-            else:
-                input_values[feature] = st.slider(
-                    pretty_name(feature),
-                    float(minimum),
-                    float(maximum),
-                    float(median),
-                    step=float(maximum - minimum) / 200,
-                    format="%.3f",
-                )
+    selected_date = pd.Timestamp(
+        day_7_date
+    )
 
-    return input_values
+    matching_rows = supplier_data[
+        supplier_data[TIMESTAMP_COLUMN]
+        == selected_date
+    ]
+
+    if matching_rows.empty:
+
+        return None
+
+    selected_index = matching_rows.index[0]
+
+    start_index = (
+        selected_index
+        - window_size
+        + 1
+    )
+
+    if start_index < 0:
+
+        return None
+
+    window = supplier_data.iloc[
+        start_index:selected_index + 1
+    ].copy()
+
+    if len(window) != window_size:
+
+        return None
+
+    return window
 
 
-def run_risk_assessment(input_values: dict) -> dict:
-    input_data = pd.DataFrame(
-        [input_values],
-        columns=model_features,
+def run_risk_assessment(
+    window,
+):
+
+    input_data = (
+        window[
+            model_features
+        ]
+        .to_numpy()
+    )
+
+    model_input = input_data.reshape(
+        1,
+        -1,
     )
 
     predicted_code = int(
-        trained_model.predict(input_data)[0]
+        trained_model.predict(
+            model_input
+        )[0]
     )
+
+    predicted_label = class_labels[
+        predicted_code
+    ]
 
     probabilities = {}
 
-    if hasattr(trained_model, "predict_proba"):
+    if hasattr(
+        trained_model,
+        "predict_proba",
+    ):
+
+        predicted_probabilities = (
+            trained_model
+            .predict_proba(
+                model_input
+            )[0]
+        )
+
         for code, probability in zip(
             trained_model.classes_,
-            trained_model.predict_proba(input_data)[0],
+            predicted_probabilities,
         ):
+
             probabilities[
                 class_labels[int(code)]
-            ] = float(probability)
+            ] = float(
+                probability
+            )
 
     return {
-        "label": class_labels[predicted_code],
+        "label": predicted_label,
         "probabilities": probabilities,
-        "inputs": input_values,
     }
 
+def render_assessment_result(assessment):
 
-def render_assessment_result(assessment: dict) -> None:
     label = assessment["label"]
+    probabilities = assessment["probabilities"]
 
-    result_column, probability_column = st.columns(
-        [1, 1]
-    )
+    # ========================================================
+    # MAIN RISK RESULT
+    # ========================================================
 
-    with result_column:
-        st.markdown(
-            f"""
-            <div class="result-card">
-                <div class="result-label">Predicted Risk Level</div>
-                <div class="result-value" style="color:{COLORS[label]}">{label.upper()}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    with st.container(border=True):
+
+        st.subheader("Risk Assessment")
+
+        if label == "High":
+
+            st.error("HIGH")
+            st.write("⚠ Early Warning")
+
+        elif label == "Medium":
+
+            st.warning("MEDIUM")
+            st.write("⚠ Monitor Closely")
+
+        else:
+
+            st.success("LOW")
+            st.write("✓ Low Risk")
+
+    # ========================================================
+    # RISK PROBABILITY
+    # ========================================================
+
+    st.subheader("Risk Probability")
+
+    probability_columns = st.columns(3)
+
+    for column, level in zip(
+        probability_columns,
+        RISK_ORDER,
+    ):
+
+        probability = probabilities.get(
+            level,
+            0,
         )
 
-        title, message = WARNING_MESSAGES[label]
+        with column:
 
-        st.markdown(
-            f"""
-            <div class="warning-box" style="background:{RISK_TINTS[label]};border-left:5px solid {COLORS[label]}">
-                <div class="warning-title">{title}</div>
-                <div class="warning-text">{message}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            with st.container(border=True):
 
-    with probability_column:
-        if assessment["probabilities"]:
-            rows = "".join(
-                f'<div class="prob-row"><span class="prob-name">{level}</span>'
-                f'<div class="prob-track"><div class="prob-fill" '
-                f'style="width:{assessment["probabilities"][level] * 100:.1f}%;background:{COLORS[level]}"></div></div>'
-                f'<span class="prob-value">{assessment["probabilities"][level] * 100:.0f}%</span></div>'
-                for level in RISK_ORDER
-            )
+                st.metric(
+                    label=f"{level} Risk",
+                    value=f"{probability * 100:.0f}%",
+                )
 
-            st.html(
-                f"""
-                <div class="info-card">
-                    <div class="kpi-label" style="margin-bottom:0.8rem">
-                        Prediction Probability
-                    </div>
-                    {rows}
-                </div>
-                """
-            )
-
+                st.progress(probability)
 
 def render_early_warning() -> None:
+
     render_header(
         "Early Warning",
-        "Enter current supply chain conditions to assess disruption risk using the trained XGBoost model.",
+        "Use the latest 7 days of supply chain conditions to predict the next Risk Level.",
     )
 
     if missing_features:
+
         st.error(
-            f"Prediction stopped. These model features are missing from the dataset: "
-            f"{', '.join(missing_features)}"
+            "These model features are missing from the dataset: "
+            + ", ".join(
+                missing_features
+            )
         )
+
         return
 
-    with card("reorder"):
-        with st.form("early_warning_form"):
-            input_values = build_input_widgets()
-            submitted = st.form_submit_button(
-                "Run Risk Assessment"
-            )
+    # --------------------------------------------------------
+    # Supplier + Day 7 Date
+    # --------------------------------------------------------
 
-    if submitted:
-        st.session_state["assessment"] = run_risk_assessment(
-            input_values
+    supplier_column, date_column = st.columns(2)
+
+    supplier_ids = sorted(
+        df[SUPPLIER_COLUMN].unique()
+    )
+
+    selected_supplier = (
+        supplier_column.selectbox(
+            "Supplier",
+            supplier_ids,
+            format_func=lambda value:
+            f"Supplier {value}",
+        )
+    )
+
+    supplier_data = (
+        df[
+            df[SUPPLIER_COLUMN]
+            == selected_supplier
+        ]
+        .sort_values(
+            TIMESTAMP_COLUMN
+        )
+        .reset_index(
+            drop=True
+        )
+    )
+
+    first_valid_date = (
+        supplier_data[
+            TIMESTAMP_COLUMN
+        ]
+        .iloc[window_size - 1]
+        .date()
+    )
+
+    last_valid_date = (
+        supplier_data[
+            TIMESTAMP_COLUMN
+        ]
+        .max()
+        .date()
+    )
+
+    selected_date = date_column.date_input(
+        "Day 7 Date",
+        value=last_valid_date,
+        min_value=first_valid_date,
+        max_value=last_valid_date,
+    )
+
+    # --------------------------------------------------------
+    # Get the 7-day window
+    # --------------------------------------------------------
+
+    window = get_seven_day_window(
+        selected_supplier,
+        selected_date,
+    )
+
+    if window is None:
+
+        st.warning(
+            "There are not enough previous days available for this date."
         )
 
-    assessment = st.session_state.get("assessment")
+        return
+
+    # --------------------------------------------------------
+    # Show 7-day input window
+    # --------------------------------------------------------
+
+    render_section_title(
+        "7-Day Input Window",
+        f"Day 7: {selected_date}",
+    )
+
+    display_columns = [
+        TIMESTAMP_COLUMN
+    ] + model_features
+
+    show_table(
+        window[
+            display_columns
+        ],
+        height=350,
+    )
+
+    # --------------------------------------------------------
+    # Prediction
+    # --------------------------------------------------------
+
+    if st.button(
+        "Run Risk Assessment"
+    ):
+
+        assessment = run_risk_assessment(
+            window
+        )
+
+        st.session_state[
+            "assessment"
+        ] = assessment
+
+    assessment = st.session_state.get(
+        "assessment"
+    )
 
     if assessment:
-        render_section_title("Model Prediction")
-        render_assessment_result(assessment)
 
+        render_section_title(
+            "Model Prediction"
+        )
+
+        render_assessment_result(
+            assessment
+        )
+
+
+# ============================================================
+# 16. MODEL INSIGHTS
+# ============================================================
 
 def render_insights() -> None:
+
     render_header(
         "Model Insights",
-        "What the trained XGBoost model relies on, and how it performs.",
+        "Feature importance and performance of the final trained model.",
     )
 
-    importance = pd.DataFrame(
+    feature_importance = (
+        trained_model
+        .feature_importances_
+    )
+
+    feature_names = []
+
+    for day in range(
+        1,
+        window_size + 1,
+    ):
+
+        for feature in model_features:
+
+            feature_names.append(
+                f"{feature}_{day}"
+            )
+
+    importance_df = pd.DataFrame(
         {
-            "Feature": [
-                pretty_name(name)
-                for name in model_features
-            ],
-            "Importance": trained_model.feature_importances_,
+            "Feature": feature_names,
+            "Importance": feature_importance,
         }
-    ).sort_values(
-        "Importance",
-        ascending=False,
     )
 
-    chart = alt.Chart(importance).mark_bar(
-        cornerRadiusEnd=6,
-        size=22,
-    ).encode(
-        y=alt.Y(
-            "Feature:N",
-            sort="-x",
-            title=None,
-        ),
-        x=alt.X(
-            "Importance:Q",
-            title="Feature importance",
-        ),
-        color=alt.Color(
-            "Importance:Q",
-            legend=None,
-            scale=alt.Scale(
-                range=[
-                    COLORS["cyan"],
-                    COLORS["logo_blue"],
-                ]
+    importance_df[
+        "Original Feature"
+    ] = (
+        importance_df[
+            "Feature"
+        ]
+        .str.rsplit(
+            "_",
+            n=1,
+        )
+        .str[0]
+    )
+
+    aggregated_importance = (
+        importance_df
+        .groupby(
+            "Original Feature"
+        )["Importance"]
+        .sum()
+        .sort_values(
+            ascending=False
+        )
+    )
+
+    importance_chart_data = (
+        aggregated_importance
+        .reset_index()
+        .rename(
+            columns={
+                "Original Feature": "Feature"
+            }
+        )
+    )
+
+    chart = (
+        alt.Chart(
+            importance_chart_data
+        )
+        .mark_bar(
+            cornerRadiusEnd=6,
+            size=22,
+        )
+        .encode(
+            y=alt.Y(
+                "Feature:N",
+                sort="-x",
+                title=None,
             ),
-        ),
-        tooltip=[
-            "Feature",
-            alt.Tooltip(
+            x=alt.X(
                 "Importance:Q",
-                format=".3f",
+                title="Feature importance",
             ),
-        ],
+            tooltip=[
+                "Feature",
+                alt.Tooltip(
+                    "Importance:Q",
+                    format=".4f",
+                ),
+            ],
+        )
     )
 
     with card("importance"):
+
         title = chart_title(
             "Feature Importance",
-            "How strongly the model relies on each feature",
+            "Aggregated importance across the 7-day input window",
         )
 
         st.altair_chart(
@@ -815,38 +1297,54 @@ def render_insights() -> None:
         )
 
     st.caption(
-        "Feature importance indicates how strongly each feature contributed to the model's classification "
-        "decisions. It does not represent causal impact or percentage of risk."
+        "Feature importance shows how strongly each feature "
+        "contributed to the model's classification decisions. "
+        "It does not represent causal impact."
     )
 
-    render_section_title("Model Performance")
+    render_section_title(
+        "Model Performance"
+    )
 
     metric_columns = st.columns(4)
 
     metrics = [
         (
             "Validation Accuracy",
-            model_info.get("validation_accuracy"),
+            model_info.get(
+                "validation_accuracy"
+            ),
         ),
         (
             "Validation Macro F1",
-            model_info.get("validation_macro_f1"),
+            model_info.get(
+                "validation_macro_f1"
+            ),
         ),
         (
             "Test Accuracy",
-            model_info.get("test_accuracy"),
+            model_info.get(
+                "test_accuracy"
+            ),
         ),
         (
             "Test Macro F1",
-            model_info.get("test_macro_f1"),
+            model_info.get(
+                "test_macro_f1"
+            ),
         ),
     ]
 
-    for column, (label, value) in zip(
+    for column, (
+        label,
+        value,
+    ) in zip(
         metric_columns,
         metrics,
     ):
+
         with column:
+
             render_kpi_card(
                 label,
                 "Not available"
@@ -855,6 +1353,10 @@ def render_insights() -> None:
             )
 
 
+# ============================================================
+# 17. PAGE ROUTING
+# ============================================================
+
 PAGE_RENDERERS = {
     "Overview": render_overview,
     "Risk Monitoring": render_risk_monitoring,
@@ -862,13 +1364,25 @@ PAGE_RENDERERS = {
     "Insights": render_insights,
 }
 
-PAGE_RENDERERS[selected_page]()
+PAGE_RENDERERS[
+    selected_page
+]()
+
 
 # ============================================================
-# 19. FOOTER
+# 18. FOOTER
 # ============================================================
+
 st.markdown(
-    f'<div style="text-align:center;color:{COLORS["muted"]};font-size:0.8rem;margin-top:3rem;">'
-    f"{PROJECT_NAME}: {PROJECT_TITLE}</div>",
+    f"""
+    <div style="
+        text-align:center;
+        color:{COLORS["muted"]};
+        font-size:0.8rem;
+        margin-top:3rem;
+    ">
+        {PROJECT_NAME}: {PROJECT_TITLE}
+    </div>
+    """,
     unsafe_allow_html=True,
 )

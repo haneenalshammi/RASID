@@ -1,6 +1,6 @@
 {
-    "model_name": "XGBoost",
-    "target": "Risk_Level",
+    "model": "XGBoost",
+    "window_size": 7,
     "features": [
         "Port_Congestion",
         "geopolitical_risk",
@@ -12,13 +12,14 @@
         "Lead_Time_Days",
         "Shipping_Cost_Index"
     ],
-    "validation_accuracy": 0.7805,
-    "validation_macro_f1": 0.7847762076594549,
-    "class_labels": {
-        "0": "Low",
-        "1": "Medium",
-        "2": "High"
+    "target": "Risk_Level",
+    "label_map": {
+        "High": 0,
+        "Low": 1,
+        "Medium": 2
     },
-    "test_accuracy": 0.7833,
-    "test_macro_f1": 0.7879
+    "validation_accuracy": 0.6985,
+    "validation_macro_f1": 0.7026,
+    "test_accuracy": 0.7103,
+    "test_macro_f1": 0.7151
 }
