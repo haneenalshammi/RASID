@@ -19,5 +19,7 @@
         "Medium": 2
     },
     "validation_macro_f1": 0.7029,
-    "test_macro_f1": 0.7116
+    "test_macro_f1": 0.7116,
+    "validation_accuracy": 0.698,
+    "test_accuracy": 0.7067
 }
