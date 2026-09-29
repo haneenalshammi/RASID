@@ -1128,27 +1128,7 @@ def render_early_warning() -> None:
         )
 
         return
-
-    # --------------------------------------------------------
-    # Show 7-day input window
-    # --------------------------------------------------------
-
-    render_section_title(
-        "7-Day Input Window",
-        f"Day 7: {selected_date}",
-    )
-
-    display_columns = [
-        TIMESTAMP_COLUMN
-    ] + model_features
-
-    show_table(
-        window[
-            display_columns
-        ],
-        height=350,
-    )
-
+    
     # --------------------------------------------------------
     # Prediction
     # --------------------------------------------------------
