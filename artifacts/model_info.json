@@ -18,8 +18,6 @@
         "Low": 1,
         "Medium": 2
     },
-    "validation_accuracy": 0.6985,
-    "validation_macro_f1": 0.7026,
-    "test_accuracy": 0.7103,
-    "test_macro_f1": 0.7151
+    "validation_macro_f1": 0.7029,
+    "test_macro_f1": 0.7116
 }
